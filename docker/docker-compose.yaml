@@ -5,7 +5,7 @@ services:
     container_name: echo1
     build:
       context: ../
-      dockerfile: ./docker/echo.Dockerfile
+      dockerfile: ./docker/echo.test.Dockerfile
     environment:
       ID: echo1
       PORT: 8080
