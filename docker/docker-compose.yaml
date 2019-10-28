@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+   echo1:
+    container_name: echo1
+    build:
+      context: ../
+      dockerfile: ./docker/echo.Dockerfile
+    environment:
+      ID: echo1
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../:/go/src/github.com/rerorero/consul-playground
+    working_dir: /go/src/github.com/rerorero/consul-playground
+    command: go run ./cmd/echo/main.go
