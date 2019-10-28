@@ -11,6 +11,7 @@ tidy:
 	go mod tidy -v
 
 .PHONY: build
+build:
 	CGO_ENABLED=0 go build -o bin/echo ./cmd/echo
 
 .PHONY: container
@@ -20,6 +21,6 @@ container:
 
 .PHONY: dockerhub
 dockerhub:
-	docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+	docker login -u "$$DOCKER_USERNAME" -p "$$DOCKER_PASSWORD";
 	docker push $(ECHO_IMAGE)
 	docker push $(ECHO_REPO):latest
