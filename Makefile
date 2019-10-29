@@ -10,6 +10,15 @@ ECHO_IMAGE := $(ECHO_REPO):$(VERSION)
 tidy:
 	go mod tidy -v
 
+.PHONY: dependency
+dependency:
+	go get -u google.golang.org/grpc
+	go get -u github.com/golang/protobuf/protoc-gen-go
+
+.PHONY: proto
+proto:
+	protoc --go_out=plugins=grpc:. ./proto/*.proto
+
 .PHONY: build
 build:
 	CGO_ENABLED=0 go build -o bin/echo ./cmd/echo
