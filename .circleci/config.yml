@@ -1,0 +1,56 @@
+version: 2
+defaults: &defaults
+  working_directory: /project
+
+golang: &golang
+  <<: *defaults
+  docker:
+    - image: golang:1.13
+      environment:
+        GOFLAGS: -mod=vendor
+
+jobs:
+  build:
+    <<: *golang
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - go-mod-{{ checksum "go.sum" }}
+      - run: go mod vendor
+      - save_cache:
+          key: go-mod-{{ checksum "go.sum" }}
+          paths:
+            - ./vendor
+            - ./bin
+      - persist_to_workspace:
+          root: /project
+          paths:
+            - vendor
+            - bin
+      - run: make build
+
+  dockerhub:
+    machine: true
+    steps:
+      - checkout
+      - run: make container
+      - run: make dockerhub
+
+filters: &filters
+  filters:
+    branches:
+      only: /.*/
+    tags:
+      only: /.*/
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build:
+          <<: *filters
+      - dockerhub:
+          requires:
+            - build
+          <<: *filters
