@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package rerorero;
+package echo;
 
 service Echo {
   rpc Echo (EchoRequest) returns (EchoResponse) {}
