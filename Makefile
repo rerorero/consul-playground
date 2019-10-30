@@ -14,6 +14,7 @@ tidy:
 dependency:
 	go get -u google.golang.org/grpc
 	go get -u github.com/golang/protobuf/protoc-gen-go
+	go mod vendor
 
 .PHONY: proto
 proto:
