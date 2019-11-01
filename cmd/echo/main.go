@@ -15,6 +15,7 @@ import (
 	echo "github.com/rerorero/consul-playground/proto"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/naming"
 )
 
 // Env is env
@@ -24,7 +25,7 @@ type Env struct {
 	GRPCPort           *int     `envconfig:"GRPC_PORT"`
 	ProxyHTTPPort      *int     `envconfig:"PROXY_HTTP_PORT"`
 	ProxyHTTPUpstreams []string `envconfig:"HTTP_UPSTREAMS"`
-	ProxyGRPCUpstreams []string `envconfig:"GRPC_UPSTREAMS"`
+	ProxyGRPCUpstream  string   `envconfig:"GRPC_UPSTREAM"`
 	Insecure           bool     `envconfig:"INSECURE" default:"true"`
 }
 
@@ -55,31 +56,33 @@ func (s *Env) Echo(ctx context.Context, req *echo.EchoRequest) (*echo.EchoRespon
 
 // ProxyServer is HTTP proxy server handler
 type ProxyServer struct {
-	httpClient  *http.Client
-	gRPCClients []echo.EchoClient
-	env         Env
+	httpClient *http.Client
+	gRPCClient echo.EchoClient
+	env        Env
 }
 
 func newProxy(env Env) *ProxyServer {
 	httpClient := new(http.Client)
 
-	var grpcClients []echo.EchoClient
-	var opts []grpc.DialOption
+	resolver, err := naming.NewDNSResolverWithFreq(5 * time.Second)
+	if err != nil {
+		log.Fatal(err)
+	}
+	opts := []grpc.DialOption{
+		grpc.WithBalancer(grpc.RoundRobin(resolver)),
+	}
 	if env.Insecure {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	for _, upstream := range env.ProxyGRPCUpstreams {
-		conn, err := grpc.Dial(upstream, opts...)
-		if err != nil {
-			log.Fatalf("did not connect to %s %v", upstream, err)
-		}
-		grpcClients = append(grpcClients, echo.NewEchoClient(conn))
+	conn, err := grpc.Dial(env.ProxyGRPCUpstream, opts...)
+	if err != nil {
+		log.Fatalf("did not connect to %s %v", env.ProxyGRPCUpstream, err)
 	}
 
 	return &ProxyServer{
-		httpClient:  httpClient,
-		gRPCClients: grpcClients,
-		env:         env,
+		httpClient: httpClient,
+		gRPCClient: echo.NewEchoClient(conn),
+		env:        env,
 	}
 }
 
@@ -96,7 +99,7 @@ func (s *ProxyServer) proxy(w http.ResponseWriter, r *http.Request) {
 	var responseBody string
 
 	// choice randomly
-	random := rand.Intn(len(s.env.ProxyHTTPUpstreams) + len(s.gRPCClients))
+	random := rand.Intn(len(s.env.ProxyHTTPUpstreams) + 1)
 	if random < len(s.env.ProxyHTTPUpstreams) {
 		// HTTP
 		host := s.env.ProxyHTTPUpstreams[random]
@@ -123,9 +126,8 @@ func (s *ProxyServer) proxy(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		// gRPC
-		log.Printf("[proxy:%s] send gRPC request to %s\n", s.env.ID, s.env.ProxyGRPCUpstreams[random-len(s.env.ProxyHTTPUpstreams)])
-		cli := s.gRPCClients[random-len(s.env.ProxyHTTPUpstreams)]
-		res, err := cli.Echo(r.Context(), &echo.EchoRequest{
+		log.Printf("[proxy:%s] send gRPC request to %s\n", s.env.ID, s.env.ProxyGRPCUpstream)
+		res, err := s.gRPCClient.Echo(r.Context(), &echo.EchoRequest{
 			Message: string(body),
 		})
 		if err != nil {
