@@ -48,3 +48,65 @@ spec:
     app: echo
   sessionAffinity: None
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-http
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: echo
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-proxy
+  labels:
+    app: echo-proxy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echo-proxy
+  template:
+    metadata:
+      labels:
+        app: echo-proxy
+    spec:
+      containers:
+      - name: echo-proxy
+        image: rerorero/echo:latest
+        env:
+        - name: ID
+          value: "proxy"
+        - name: PROXY_HTTP_PORT
+          value: "8000"
+        - name: HTTP_UPSTREAMS
+          value: "http://echo-http.default.svc.cluster.local:8080"
+        - name: GRPC_UPSTREAM
+          value: "echo-grpc.default.svc.cluster.local:9090"
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-proxy
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+  selector:
+    app: echo-proxy
+  type: LoadBalancer
+  loadBalancerIP: 35.236.184.250
