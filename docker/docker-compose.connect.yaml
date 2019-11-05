@@ -11,32 +11,31 @@ services:
       - "8500:8500"
       - "8600:8600"
       - "8600:8600/udp"
-    command: "agent -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+    command: "agent -log-level=debug -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+    volumes:
+      - ./config/consul.hcl:/consul/config/consul.hcl
     networks:
       test:
         ipv4_address: 10.3.10.11
 
   consul2:
     image: consul:latest
-    command: "agent -server -retry-join consul1 -client 0.0.0.0"
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/consul.hcl:/consul/config/consul.hcl
     networks:
       test:
         ipv4_address: 10.3.10.12
 
   consul3:
     image: consul:latest
-    command: "agent -server -retry-join consul1 -client 0.0.0.0"
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/consul.hcl:/consul/config/consul.hcl
     networks:
       test:
         ipv4_address: 10.3.10.13
 
-
-  # ------------------------
-  # consul agent
-  # ------------------------
-  # agent-echo1: &consul-server
-  #   image: consul:latest
-  #   command: "agent -retry-join consul-server-bootstrap -client 0.0.0.0"
 
   # ------------------------
   # application
@@ -47,21 +46,26 @@ services:
       ID: echo1
       HTTP_PORT: 8080
       GRPC_PORT: 9090
-    ports:
-      - "8081:8080"
-      - "9091:9090"
     networks:
       test:
         ipv4_address: 10.3.0.11
 
   echo1-agent:
     image: consul:latest
-    command: "agent -retry-join consul1 -client 0.0.0.0"
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
     volumes:
-      - ./config/echo1.hcl:/consul/config/echo1.hcl
+      - ./config/connect/echo1.hcl:/consul/config/echo1.hcl
     networks:
       test:
         ipv4_address: 10.3.20.11
+
+  echo1-http-sidecar:
+    restart: on-failure
+    image: consul:latest
+    command: "connect proxy -log-level=debug -http-addr=10.3.20.11:8500 -sidecar-for=echo1-http"
+    networks:
+      test:
+        ipv4_address: 10.3.30.11
 
   echo2:
     image: rerorero/echo:latest
@@ -69,26 +73,34 @@ services:
       ID: echo2
       HTTP_PORT: 8080
       GRPC_PORT: 9090
-    ports:
-      - "8082:8080"
-      - "9092:9090"
     networks:
       test:
         ipv4_address: 10.3.0.12
 
   echo2-agent:
     image: consul:latest
-    command: "agent -retry-join consul1 -client 0.0.0.0"
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
     volumes:
-      - ./config/echo2.hcl:/consul/config/echo2.hcl
+      - ./config/connect/echo2.hcl:/consul/config/echo2.hcl
     networks:
       test:
         ipv4_address: 10.3.20.12
 
-  echo-proxy:
+  echo2-http-sidecar:
+    restart: on-failure
+    image: consul:latest
+    command: "connect proxy -log-level=debug -http-addr=10.3.20.12:8500 -sidecar-for=echo2-http"
+    networks:
+      test:
+        ipv4_address: 10.3.30.12
+
+  # ------------------------
+  # lb
+  # ------------------------
+  echo-lb:
     image: rerorero/echo:latest
     environment:
-      ID: echo-proxy
+      ID: echo-lb
       PROXY_HTTP_PORT: 8000
       HTTP_UPSTREAMS: "http://echo1:8080/,http://echo2:8080/"
       GRPC_UPSTREAM: "echo-grpc.com:9090"
@@ -101,14 +113,24 @@ services:
       - "echo-grpc.com:10.3.0.11"
       - "echo-grpc.com:10.3.0.12"
 
-  echo-proxy-agent:
+  echo-lb-agent:
     image: consul:latest
-    command: "agent -retry-join consul1 -client 0.0.0.0"
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
     volumes:
-      - ./config/echo-proxy.hcl:/consul/config/echo-proxy.hcl
+      - ./config/connect/echo-lb.hcl:/consul/config/echo-lb.hcl
     networks:
       test:
         ipv4_address: 10.3.20.13
+
+  echo-lb-sidecar:
+    restart: on-failure
+    image: consul:latest
+    command: "connect proxy -log-level=debug -http-addr=10.3.20.13:8500 -sidecar-for=echo-lb"
+    ports:
+      - "8001:8001"
+    networks:
+      test:
+        ipv4_address: 10.3.30.13
 
 networks:
   test:

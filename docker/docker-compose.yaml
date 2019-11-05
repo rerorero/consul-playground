@@ -41,13 +41,13 @@ services:
       test:
         ipv4_address: 10.3.0.12
 
-   echo-proxy:
-    container_name: echo-proxy
+   echo-lb:
+    container_name: echo-lb
     build:
       context: ../
       dockerfile: ./docker/echo.test.Dockerfile
     environment:
-      ID: echo-proxy
+      ID: echo-lb
       PROXY_HTTP_PORT: 8000
       HTTP_UPSTREAMS: "http://echo1:8080/,http://echo2:8080/"
       GRPC_UPSTREAM: "echo-grpc.com:9090"
