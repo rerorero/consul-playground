@@ -30,9 +30,15 @@ service {
         upstreams = [
           {
             destination_type = "service"
-            destination_name = "echo1-http"
+            destination_name = "echo-http"
             local_bind_address = "10.3.30.13"
             local_bind_port = 8001
+          },
+          {
+            destination_type = "service"
+            destination_name = "echo-grpc"
+            local_bind_address = "10.3.30.13"
+            local_bind_port = 8002
           }
         ]
       }
