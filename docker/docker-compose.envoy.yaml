@@ -1,0 +1,158 @@
+version: '3'
+
+services:
+  # ------------------------
+  # consul server
+  # ------------------------
+  consul1: &consul-server
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    ports:
+      - "8400:8400"
+      - "8500:8500"
+      - "8502:8502"
+      - "8600:8600"
+      - "8600:8600/udp"
+    command: "agent -log-level=debug -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+    volumes:
+      - ./config/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.10.11
+
+  consul2:
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.10.12
+
+  consul3:
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.10.13
+
+
+  # ------------------------
+  # application
+  # ------------------------
+  echo1:
+    image: rerorero/echo:latest
+    environment:
+      ID: echo1
+      HTTP_PORT: 8080
+      GRPC_PORT: 9090
+    networks:
+      test:
+        ipv4_address: 10.3.0.11
+
+  echo1-agent:
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/echo1.hcl:/consul/config/echo1.hcl
+      - ./config/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.20.11
+
+  echo1-http-sidecar:
+    restart: on-failure
+    image: rerorero/consul-envoy:latest
+    command: "-http-addr=10.3.20.11:8500 -grpc-addr=10.3.20.11:8502 -sidecar-for=echo1-http -- -l debug"
+    networks:
+      test:
+        ipv4_address: 10.3.30.11
+
+  echo1-grpc-sidecar:
+    restart: on-failure
+    image: rerorero/consul-envoy:latest
+    command: "-http-addr=10.3.20.11:8500 -grpc-addr=10.3.20.11:8502 -sidecar-for=echo1-grpc -- -l debug"
+    networks:
+      test:
+        ipv4_address: 10.3.40.11
+
+  echo2:
+    image: rerorero/echo:latest
+    environment:
+      ID: echo2
+      HTTP_PORT: 8080
+      GRPC_PORT: 9090
+    networks:
+      test:
+        ipv4_address: 10.3.0.12
+
+  echo2-agent:
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/echo2.hcl:/consul/config/echo2.hcl
+      - ./config/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.20.12
+
+  echo2-http-sidecar:
+    restart: on-failure
+    image: rerorero/consul-envoy:latest
+    command: "-http-addr=10.3.20.12:8500 -grpc-addr=10.3.20.12:8502 -sidecar-for=echo2-http -- -l debug"
+    networks:
+      test:
+        ipv4_address: 10.3.30.12
+
+  echo2-grpc-sidecar:
+    restart: on-failure
+    image: rerorero/consul-envoy:latest
+    command: "-http-addr=10.3.20.12:8500 -grpc-addr=10.3.20.12:8502 -sidecar-for=echo2-grpc -- -l debug"
+    networks:
+      test:
+        ipv4_address: 10.3.40.12
+
+  # ------------------------
+  # lb
+  # ------------------------
+  echo-lb:
+    image: rerorero/echo:latest
+    environment:
+      ID: echo-lb
+      PROXY_HTTP_PORT: 8000
+      HTTP_UPSTREAMS: "http://10.3.30.13:8001/"
+      GRPC_UPSTREAM: "10.3.30.13:8002"
+    ports:
+      - "8000:8000"
+    networks:
+      test:
+        ipv4_address: 10.3.0.13
+
+  echo-lb-agent:
+    image: hashicorpdev/consul:${CONSUL_VERSION:-latest}
+    command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./config/connect/echo-lb.hcl:/consul/config/echo-lb.hcl
+      - ./config/consul.hcl:/consul/config/consul.hcl
+    networks:
+      test:
+        ipv4_address: 10.3.20.13
+
+  echo-lb-sidecar:
+    restart: on-failure
+    image: rerorero/consul-envoy:latest
+    command: "--http-addr=10.3.20.13:8500 -grpc-addr=10.3.20.13:8502 -sidecar-for=echo-lb -- -l debug"
+    ports:
+      - "8001:8001"
+      - "8002:8002"
+    networks:
+      test:
+        ipv4_address: 10.3.30.13
+
+networks:
+  test:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.3.0.0/16
