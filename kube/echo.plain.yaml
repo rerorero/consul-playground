@@ -20,7 +20,9 @@ spec:
         image: rerorero/echo:latest
         env:
         - name: ID
-          value: "echo"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: HTTP_PORT
           value: "8080"
         - name: GRPC_PORT
@@ -67,25 +69,27 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: echo-proxy
+  name: echo-lb
   labels:
-    app: echo-proxy
+    app: echo-lb
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: echo-proxy
+      app: echo-lb
   template:
     metadata:
       labels:
-        app: echo-proxy
+        app: echo-lb
     spec:
       containers:
-      - name: echo-proxy
+      - name: echo-lb
         image: rerorero/echo:latest
         env:
         - name: ID
-          value: "proxy"
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: PROXY_HTTP_PORT
           value: "8000"
         - name: HTTP_UPSTREAMS
@@ -100,13 +104,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: echo-proxy
+  name: echo-lb
 spec:
   ports:
   - name: http
     port: 80
     targetPort: 8000
   selector:
-    app: echo-proxy
+    app: echo-lb
   type: LoadBalancer
   loadBalancerIP: 35.236.184.250

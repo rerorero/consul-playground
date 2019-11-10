@@ -1,0 +1,134 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-http-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echo-http
+  template:
+    metadata:
+      labels:
+        app: echo-http
+      annotations:
+        "consul.hashicorp.com/connect-inject": "true"
+        "consul.hashicorp.com/connect-service": "echo-http"
+        "consul.hashicorp.com/connect-service-port": "8080"
+    spec:
+      containers:
+      - name: echo-http
+        image: rerorero/echo:latest
+        env:
+        - name: ID
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: HTTP_PORT
+          value: "8080"
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+      serviceAccountName: echo-http
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: echo-http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-grpc-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echo-grpc
+  template:
+    metadata:
+      labels:
+        app: echo-grpc
+      annotations:
+        "consul.hashicorp.com/connect-inject": "true"
+        "consul.hashicorp.com/connect-service": "echo-grpc"
+        "consul.hashicorp.com/connect-service-port": "9090"
+    spec:
+      containers:
+      - name: echo-grpc
+        image: rerorero/echo:latest
+        env:
+        - name: ID
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: GRPC_PORT
+          value: "9090"
+        ports:
+        - containerPort: 9090
+          name: grpc
+          protocol: TCP
+      serviceAccountName: echo-grpc
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: echo-grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-lb-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: echo-lb
+  template:
+    metadata:
+      labels:
+        app: echo-lb
+      annotations:
+        "consul.hashicorp.com/connect-inject": "true"
+        "consul.hashicorp.com/connect-service-upstreams": "echo-http:8080,echo-grpc:9090"
+    spec:
+      containers:
+      - name: echo-lb
+        image: rerorero/echo:latest
+        env:
+        - name: ID
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: PROXY_HTTP_PORT
+          value: "8000"
+        - name: HTTP_UPSTREAMS
+          value: "http://localhost:8080"
+        - name: GRPC_UPSTREAM
+          value: "localhost:9090"
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+      serviceAccountName: echo-lb
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: echo-lb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-lb
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+  selector:
+    app: echo-lb
+  type: LoadBalancer
+  loadBalancerIP: 35.236.184.250

@@ -26,7 +26,7 @@ curl localhost:8000 -d 'alice'
 
 #### plain configuration
 ```
-kubectl apply -f kube/plain.yaml
+kubectl apply -f kube/echo.plain.yaml
 curl http://35.236.184.250 -d 'alice'
 ```
 
@@ -38,4 +38,6 @@ helm init
 kubectl apply -f kube/admin-tiller.yaml
 kube patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
 
+kubectl apply -f kube/echo.connect.yaml
+curl http://35.236.184.250 -d 'alice'
 ```
