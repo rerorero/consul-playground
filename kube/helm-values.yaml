@@ -1,0 +1,18 @@
+global:
+  datacenter: dc10
+  image: hashicorpdev/consul:latest
+
+ui:
+  service:
+    type: "LoadBalancer"
+
+connectInject:
+  enabled: true
+
+client:
+  enabled: true
+  grpc: true
+
+server:
+  replicas: 3
+  bootstrapExpect: 3

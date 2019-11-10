@@ -1,25 +1,41 @@
 consul-playground
 ==========
 
-#### Docker Compose
+## Docker Compose
 
-plain configuration
+#### plain configuration
 ```
 docker-compose -f ./docker/docker-compose.yaml up -d
 curl localhost:8000 -d 'alice'
 ```
 
-service mesh with Consul proxy
+#### service mesh with Consul proxy
 ```
 docker-compose -f ./docker/docker-compose.connect.yaml up -d
 curl localhost:8000 -d 'alice'
 ```
 
+#### service mesh with Envoy proxy
+```
+docker-compose -f ./docker/docker-compose.envoy.yaml up -d
+curl localhost:8000 -d 'alice'
+```
 
-#### kubernetes
-plain configuration
+
+## kubernetes
+
+#### plain configuration
 ```
 kubectl apply -f kube/plain.yaml
 curl http://35.236.184.250 -d 'alice'
 ```
 
+#### service mesh with Envyo proxy
+```
+helm init
+
+# if RBAC is enabled
+kubectl apply -f kube/admin-tiller.yaml
+kube patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+
+```
