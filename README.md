@@ -41,3 +41,7 @@ kube patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":
 kubectl apply -f kube/echo.connect.yaml
 curl http://35.236.184.250 -d 'alice'
 ```
+
+```
+helm install --name prometheus --namespace default -f kube/prometheus-values.yaml stable/prometheus
+```

@@ -15,7 +15,7 @@ spec:
       annotations:
         "consul.hashicorp.com/connect-inject": "true"
         "consul.hashicorp.com/connect-service": "echo-http"
-        "consul.hashicorp.com/connect-service-port": "8080"
+        "consul.hashicorp.com/connect-service-port": "18080"
     spec:
       containers:
       - name: echo-http
@@ -26,11 +26,13 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         - name: HTTP_PORT
-          value: "8080"
+          value: "18080"
         ports:
-        - containerPort: 8080
+        - containerPort: 18080
           name: http
           protocol: TCP
+        - containerPort: 19000
+          name: envoy-admin
       serviceAccountName: echo-http
 ---
 apiVersion: v1
@@ -54,7 +56,7 @@ spec:
       annotations:
         "consul.hashicorp.com/connect-inject": "true"
         "consul.hashicorp.com/connect-service": "echo-grpc"
-        "consul.hashicorp.com/connect-service-port": "9090"
+        "consul.hashicorp.com/connect-service-port": "19090"
     spec:
       containers:
       - name: echo-grpc
@@ -65,11 +67,13 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         - name: GRPC_PORT
-          value: "9090"
+          value: "19090"
         ports:
-        - containerPort: 9090
+        - containerPort: 19090
           name: grpc
           protocol: TCP
+        - containerPort: 19000
+          name: envoy-admin
       serviceAccountName: echo-grpc
 ---
 apiVersion: v1
@@ -92,7 +96,7 @@ spec:
         app: echo-lb
       annotations:
         "consul.hashicorp.com/connect-inject": "true"
-        "consul.hashicorp.com/connect-service-upstreams": "echo-http:8080,echo-grpc:9090"
+        "consul.hashicorp.com/connect-service-upstreams": "echo-http:18080,echo-grpc:19090"
     spec:
       containers:
       - name: echo-lb
@@ -103,15 +107,17 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         - name: PROXY_HTTP_PORT
-          value: "8000"
+          value: "18000"
         - name: HTTP_UPSTREAMS
-          value: "http://localhost:8080"
+          value: "http://localhost:18080"
         - name: GRPC_UPSTREAM
-          value: "localhost:9090"
+          value: "localhost:19090"
         ports:
-        - containerPort: 8000
+        - containerPort: 18000
           name: http
           protocol: TCP
+        - containerPort: 19000
+          name: envoy-admin
       serviceAccountName: echo-lb
 ---
 apiVersion: v1
@@ -127,7 +133,7 @@ spec:
   ports:
   - name: http
     port: 80
-    targetPort: 8000
+    targetPort: 18000
   selector:
     app: echo-lb
   type: LoadBalancer
