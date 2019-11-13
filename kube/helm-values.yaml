@@ -9,6 +9,14 @@ ui:
 connectInject:
   enabled: true
 
+  centralConfig:
+    enabled: true
+    proxyDefaults: |
+      {
+        "prometheus_bind_addr": "127.0.0.1:9102",
+        "envoy_dogstatsd_url": "udp://127.0.0.1:9125"
+      }
+
 client:
   enabled: true
   grpc: true
@@ -16,3 +24,4 @@ client:
 server:
   replicas: 3
   bootstrapExpect: 3
+  storage: 1Gi

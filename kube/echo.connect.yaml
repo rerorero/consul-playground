@@ -20,6 +20,7 @@ spec:
       containers:
       - name: echo-http
         image: rerorero/echo:latest
+        imagePullPolicy: Always
         env:
         - name: ID
           valueFrom:
@@ -61,6 +62,7 @@ spec:
       containers:
       - name: echo-grpc
         image: rerorero/echo:latest
+        imagePullPolicy: Always
         env:
         - name: ID
           valueFrom:
@@ -101,6 +103,7 @@ spec:
       containers:
       - name: echo-lb
         image: rerorero/echo:latest
+        imagePullPolicy: Always
         env:
         - name: ID
           valueFrom:
