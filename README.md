@@ -46,6 +46,13 @@ curl http://35.236.184.250 -d 'alice'
 ```
 helm install --name prometheus --namespace default -f kube/prometheus-values.yaml stable/prometheus
 ```
+show UI
+```
+kubectl port-forward `kubectl get po -l "app=prometheus,component=server" -o jsonpath="{.items[0].metadata.name}"` 9090:9090
+open http://localhost:9090
+# you need port-forwarding for consul
+CONSUL_HTTP_ADDR=127.0.0.1:18500 consul config write ./kube/config/proxy-defaults.hcl
+```
 
 #### Show control plane UI
 ```
