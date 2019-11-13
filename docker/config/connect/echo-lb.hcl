@@ -1,4 +1,5 @@
 service {
+  id = "echo-lb-sid"
   name = "echo-lb"
   tags = ["echo-lb","http"]
   address = "10.3.0.13"
@@ -24,7 +25,7 @@ service {
 
       proxy = {
         destination_service_name = "echo-lb"
-        destination_service_id = "echo-lb"
+        destination_service_id = "echo-lb-sid"
         local_service_address = "10.3.0.13"
         local_service_port = 8000
         upstreams = [

@@ -22,7 +22,7 @@ services:
     image: consul:latest
     command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
     volumes:
-      - ./config/connect/consul.hcl:/consul/config/consul.hcl
+      - ./config/consul.hcl:/consul/config/consul.hcl
     networks:
       test:
         ipv4_address: 10.3.10.12
@@ -31,7 +31,7 @@ services:
     image: consul:latest
     command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
     volumes:
-      - ./config/connect/consul.hcl:/consul/config/consul.hcl
+      - ./config/consul.hcl:/consul/config/consul.hcl
     networks:
       test:
         ipv4_address: 10.3.10.13
