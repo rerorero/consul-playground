@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  # ------------------------
+  # consul server
+  # ------------------------
+  consul1:
+    image: hashicorpdev/consul:latest
+    ports:
+      - "8400:8400"
+      - "8500:8500"
+      - "8600:8600"
+      - "8600:8600/udp"
+    command: "agent -log-level=debug -server -bootstrap-expect 3 -ui -client 0.0.0.0"
+    volumes:
+      - ./consul.hcl:/consul/config/consul.hcl
+    networks:
+      - test
+
+  consul2:
+    image: hashicorpdev/consul:latest
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./consul.hcl:/consul/config/consul.hcl
+    networks:
+      - test
+
+  consul3:
+    image: hashicorpdev/consul:latest
+    command: "agent -log-level=debug -server -retry-join consul1 -client 0.0.0.0"
+    volumes:
+      - ./consul.hcl:/consul/config/consul.hcl
+    networks:
+      - test
+
+  # ------------------------
+  # agent
+  # ------------------------
+  # node1:
+  #   image: hashicorpdev/consul:latest
+  #   command: "agent -log-level=debug -retry-join consul1 -client 0.0.0.0"
+  #   volumes:
+  #     - ./node1.hcl:/consul/config/node1.hcl
+  #   networks:
+  #     - test
+
+networks:
+  test:
